@@ -1,8 +1,11 @@
 package com.example.android.sunshine.app;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -11,9 +14,12 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.text.format.Time;
+import android.widget.Toast;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -53,11 +59,20 @@ public class ForecastFragment extends Fragment {
         };
 
 
-        List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
+        final List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
         weekForecastAdapter = new ArrayAdapter<String>(getActivity(),R.layout.list_item_forecast,R.id.list_item_forecast_textview,weekForecast);
         ListView mListView = (ListView)rootView.findViewById(R.id.listview_forecast);
         mListView.setAdapter(weekForecastAdapter);
-
+       mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+           @Override
+           public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
+               String forecast =weekForecastAdapter.getItem(pos);
+               Toast.makeText(getActivity(), forecast, Toast.LENGTH_SHORT).show();
+               Intent i = new Intent(getActivity(),DetailActivity.class)
+                       .putExtra(Intent.EXTRA_TEXT,forecast);
+               startActivity(i);
+           }
+       });
         return rootView;
     }
 
@@ -76,14 +91,18 @@ public class ForecastFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id=item.getItemId();
         if(id == R.id.action_refresh){
-            FetchWeatherTask weatherTask =new FetchWeatherTask();
-            weatherTask.execute("110056");
+            updateWeather();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-
+    private void updateWeather(){
+        SharedPreferences s = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = s.getString(getString(R.string.pref_location_key),getString(R.string.pref_location_default));
+        FetchWeatherTask weatherTask =new FetchWeatherTask();
+        weatherTask.execute(location);
+    }
 
 
     public class FetchWeatherTask extends AsyncTask <String,Void,String[]>{
@@ -289,5 +308,11 @@ public class ForecastFragment extends Fragment {
             }
 
         }
+
+    }
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateWeather();
     }
 }
